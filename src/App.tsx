@@ -9,6 +9,7 @@ import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 declare global {
   interface Window {
     PartnersCoupang: any;
+    PartnersCoupangInitialized: boolean;
   }
 }
 import { Search, Heart, Sparkles, MessageSquare, Quote, Loader2, Film, User, Info, Copy, Check, Flame, CloudRain, Coffee, Moon, HeartOff, Shield, Plane, Home, Users, Laugh, Shuffle } from 'lucide-react';
@@ -139,11 +140,13 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (window.PartnersCoupangInitialized) return;
+
     const script = document.createElement('script');
     script.src = "https://ads-partners.coupang.com/g.js";
     script.async = true;
     script.onload = () => {
-      if (window.PartnersCoupang) {
+      if (window.PartnersCoupang && !window.PartnersCoupangInitialized) {
         new window.PartnersCoupang.G({
           "id": 975969,
           "template": "carousel",
@@ -152,6 +155,20 @@ export default function App() {
           "height": "120",
           "tsource": ""
         });
+        window.PartnersCoupangInitialized = true;
+        
+        // Move the generated iframe to our container after a short delay
+        setTimeout(() => {
+          const iframes = document.querySelectorAll('iframe');
+          const coupangIframe = Array.from(iframes).find(f => f.src.includes('ads-partners.coupang.com'));
+          const container = document.getElementById('coupang-widget-container');
+          if (coupangIframe && container) {
+            container.innerHTML = '';
+            container.appendChild(coupangIframe);
+            coupangIframe.style.display = 'block';
+            coupangIframe.style.margin = '0 auto';
+          }
+        }, 1500);
       }
     };
     document.body.appendChild(script);
@@ -577,8 +594,8 @@ export default function App() {
           <p className="text-sm md:text-base text-[#6B6B6B] mb-6 font-medium">
             이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
           </p>
-          <div className="overflow-hidden rounded-2xl bg-white border border-[#F0F0F0] shadow-sm h-[120px]">
-            {/* Coupang carousel will be injected here by the script */}
+          <div id="coupang-widget-container" className="min-h-[120px] w-full flex justify-center items-center overflow-hidden rounded-2xl bg-white border border-[#F0F0F0] shadow-sm">
+            <p className="text-[10px] text-[#D4A373] animate-pulse">추천 상품을 불러오는 중...</p>
           </div>
         </div>
         
