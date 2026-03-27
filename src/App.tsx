@@ -457,7 +457,7 @@ export default function App() {
 
       {/* Results Section */}
       <main className="max-w-5xl mx-auto px-6 pb-24">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
               key="loading"
@@ -467,30 +467,59 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="grid gap-8"
             >
-              <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <Loader2 className="w-10 h-10 text-[#D4A373] animate-spin" />
-                <p className="text-[#D4A373] font-medium animate-pulse">명대사를 큐레이팅하고 있습니다...</p>
-              </div>
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white p-8 md:p-12 rounded-3xl border border-[#F0F0F0] animate-pulse opacity-50">
-                  <div className="w-10 h-10 bg-[#F5EBE0] rounded-lg mb-6" />
-                  <div className="h-8 bg-[#F5F5F5] rounded-md w-3/4 mb-6" />
-                  <div className="flex gap-4 mb-6">
-                    <div className="h-4 bg-[#F5F5F5] rounded-md w-24" />
-                    <div className="h-4 bg-[#F5F5F5] rounded-md w-32" />
-                  </div>
-                  <div className="pt-6 border-t border-[#F5F5F5]">
-                    <div className="h-4 bg-[#F5F5F5] rounded-md w-full mb-2" />
-                    <div className="h-4 bg-[#F5F5F5] rounded-md w-2/3" />
-                  </div>
+              <div className="flex flex-col items-center justify-center py-20 gap-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#D4A373] opacity-20 blur-xl rounded-full animate-pulse" />
+                  <Loader2 className="w-12 h-12 text-[#D4A373] animate-spin relative z-10" />
                 </div>
-              ))}
+                <div className="text-center">
+                  <p className="text-[#D4A373] font-bold text-lg animate-pulse mb-2">명대사를 큐레이팅하고 있습니다...</p>
+                  <p className="text-[#A0A0A0] text-sm">잠시만 기다려 주세요. 최고의 대사를 찾고 있어요.</p>
+                </div>
+              </div>
+              
+              <div className="grid gap-8 opacity-40">
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-white p-8 md:p-12 rounded-3xl border border-[#F0F0F0] animate-pulse">
+                    <div className="w-10 h-10 bg-[#F5EBE0] rounded-lg mb-6" />
+                    <div className="h-8 bg-[#F5F5F5] rounded-md w-3/4 mb-6" />
+                    <div className="flex gap-4 mb-6">
+                      <div className="h-4 bg-[#F5F5F5] rounded-md w-24" />
+                      <div className="h-4 bg-[#F5F5F5] rounded-md w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ) : error ? (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-20 flex flex-col items-center gap-6"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
+                <Shield className="w-8 h-8 text-red-400" />
+              </div>
+              <div className="max-w-md">
+                <h3 className="text-lg font-bold text-[#2C2C2C] mb-2">연결에 문제가 발생했습니다</h3>
+                <p className="text-red-400 text-sm italic mb-6">{error}</p>
+                <button
+                  onClick={() => searchDialogues(query, selectedCategory || undefined, false, 1)}
+                  className="px-8 py-3 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-100 flex items-center gap-2 mx-auto"
+                >
+                  <Shuffle className="w-4 h-4" />
+                  다시 시도하기
+                </button>
+              </div>
             </motion.div>
           ) : results.length > 0 ? (
             <motion.div
               key="results"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               className="grid gap-8"
             >
@@ -507,7 +536,7 @@ export default function App() {
               )}
               {results.map((item, idx) => (
                 <motion.article
-                  key={idx}
+                  key={`${item.work}-${idx}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: idx * 0.05 }}
@@ -569,32 +598,22 @@ export default function App() {
                 </motion.article>
               ))}
             </motion.div>
-          ) : !loading && !error && (
+          ) : (
             <motion.div
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-20"
+              exit={{ opacity: 0 }}
+              className="text-center py-32"
             >
-              <p className="text-[#A0A0A0]">검색어나 카테고리를 선택하여 명대사를 찾아보세요.</p>
-            </motion.div>
-          )}
-
-          {error && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-10 flex flex-col items-center gap-4"
-            >
-              <p className="text-red-400 text-sm italic">{error}</p>
-              <button
-                onClick={() => searchDialogues(query, selectedCategory || undefined, false, 1)}
-                className="px-6 py-2 rounded-full border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors flex items-center gap-2"
-              >
-                <Shuffle className="w-3 h-3" />
-                다른 방식으로 다시 시도
-              </button>
+              <div className="w-20 h-20 bg-[#F5F5F5] rounded-full flex items-center justify-center mx-auto mb-8">
+                <MessageSquare className="w-10 h-10 text-[#D4A373] opacity-30" />
+              </div>
+              <h3 className="text-xl font-bold text-[#2C2C2C] mb-3">명대사를 찾아보세요</h3>
+              <p className="text-[#A0A0A0] max-w-xs mx-auto leading-relaxed">
+                위의 검색창에 키워드를 입력하거나<br />
+                카테고리를 선택하여 영감을 주는 대사를 찾아보세요.
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
