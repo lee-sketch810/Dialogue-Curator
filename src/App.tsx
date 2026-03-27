@@ -16,8 +16,13 @@ function cn(...inputs: ClassValue[]) {
 
 // Remove top-level genAI initialization to ensure fresh key usage
 const getGenAI = () => {
-  const key = process.env.GEMINI_API_KEY2 || process.env.GEMINI_API_KEY;
-  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'MY_GEMINI_API_KEY2') {
+  const key = 
+    process.env.GEMINI_API_KEY2 || 
+    process.env.GEMINI_API_KEY || 
+    (import.meta as any).env?.VITE_GEMINI_API_KEY2 || 
+    (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    
+  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'MY_GEMINI_API_KEY2' || key === 'undefined') {
     throw new Error("API_KEY_MISSING");
   }
   return new GoogleGenAI({ apiKey: key });
