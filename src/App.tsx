@@ -473,8 +473,7 @@ export default function App() {
                   <Loader2 className="w-12 h-12 text-[#D4A373] animate-spin relative z-10" />
                 </div>
                 <div className="text-center">
-                  <p className="text-[#D4A373] font-bold text-lg animate-pulse mb-2">명대사를 큐레이팅하고 있습니다...</p>
-                  <p className="text-[#A0A0A0] text-sm">잠시만 기다려 주세요. 최고의 대사를 찾고 있어요.</p>
+                  <p className="text-[#D4A373] font-bold text-lg animate-pulse">대사를 찾는 중...</p>
                 </div>
               </div>
               
