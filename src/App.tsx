@@ -182,7 +182,7 @@ export default function App() {
     document.body.appendChild(script);
   }, []);
 
-  const fillQuotePool = async (retryCount = 0) => {
+  const fillQuotePool = async (retryCount = 0): Promise<void> => {
     try {
       const ai = getGenAI();
       let model = "gemini-3-flash-preview";
@@ -227,17 +227,18 @@ export default function App() {
           }
         } catch (parseErr) {
           console.error("JSON Parse Error in Pool:", parseErr);
-          if (retryCount < 2) fillQuotePool(retryCount + 1);
+          if (retryCount < 2) await fillQuotePool(retryCount + 1);
         }
       }
     } catch (e: any) {
       console.error("Pool Fill Error:", e);
-      if (retryCount < 2) fillQuotePool(retryCount + 1);
+      if (retryCount < 2) await fillQuotePool(retryCount + 1);
     }
   };
 
   const searchDialogues = async (searchQuery: string, category?: string, isBackground = false, retryCount = 0) => {
-    if (!isBackground) {
+    console.log(`[Search] query: "${searchQuery}", category: "${category}", retry: ${retryCount}, isBackground: ${isBackground}`);
+    if (!isBackground && retryCount === 0) {
       setLoading(true);
       setResults([]);
     }
@@ -274,6 +275,7 @@ export default function App() {
       });
 
       const text = response.text;
+      console.log(`[Search] Response received for retry ${retryCount}`);
       if (text) {
         let jsonStr = text.replace(/```json\n?|```/g, '').trim();
         const start = jsonStr.indexOf('[');
@@ -299,6 +301,7 @@ export default function App() {
               category: item.category || category || "기타"
             }));
             setResults(sanitized);
+            console.log(`[Search] Results set: ${sanitized.length} items`);
             
             if (!searchQuery && (category === '인생에 영감을 주는 무작위' || !category)) {
               localStorage.setItem('daily_dialogues', JSON.stringify({
@@ -310,20 +313,20 @@ export default function App() {
             throw new Error("EMPTY_RESPONSE");
           }
         } catch (parseErr) {
-          console.error("JSON Parse Error:", parseErr, "Raw:", text);
+          console.error("[Search] JSON Parse Error:", parseErr, "Raw:", text);
           if (retryCount < 2) {
-            searchDialogues(searchQuery, category, isBackground, retryCount + 1);
+            await searchDialogues(searchQuery, category, isBackground, retryCount + 1);
           } else if (!isBackground) {
             setError("데이터를 해석하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
           }
         }
       }
     } catch (err: any) {
-      console.error("Search Error:", err);
+      console.error("[Search] Error:", err);
       
       // Handle 404, 429, 403, 500 etc.
       if (retryCount < 2) {
-        searchDialogues(searchQuery, category, isBackground, retryCount + 1);
+        await searchDialogues(searchQuery, category, isBackground, retryCount + 1);
         return;
       }
 
@@ -340,9 +343,14 @@ export default function App() {
         }
       }
     } finally {
-      if (!isBackground) setLoading(false);
+      if (!isBackground && retryCount === 0) {
+        setLoading(false);
+        console.log("[Search] Loading finished");
+      }
     }
   };
+
+
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -596,6 +604,16 @@ export default function App() {
                   </div>
                 </motion.article>
               ))}
+            </motion.div>
+          ) : !loading && !error && !isInitialLoad ? (
+            <motion.div
+              key="no-results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-20 text-[#6B6B6B] font-light"
+            >
+              대사를 찾지 못했습니다. 다른 검색어나 카테고리를 선택해보세요.
             </motion.div>
           ) : null}
         </AnimatePresence>
