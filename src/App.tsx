@@ -136,13 +136,12 @@ export default function App() {
     try {
       const ai = getGenAI();
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-flash-latest",
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
           systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Return ONLY JSON.",
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
           maxOutputTokens: 1500
         },
       });
@@ -174,7 +173,8 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      const model = "gemini-3-flash-preview";
+      // Use a more widely available stable alias
+      const model = "gemini-flash-latest";
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
         : `Find 3 movie or drama quotes for: "${searchQuery}".`;
@@ -193,7 +193,6 @@ export default function App() {
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
           maxOutputTokens: 1500
         },
       });
@@ -229,7 +228,9 @@ export default function App() {
         if (err.message === "API_KEY_MISSING") {
           setError("API 키가 설정되지 않았습니다. 환경 변수 설정을 확인해주세요.");
         } else {
-          setError("데이터를 처리하는 중 오류가 발생했습니다. 버튼을 다시 눌러주세요.");
+          // Show more detailed error info for diagnosis
+          const detail = err.message || "알 수 없는 오류";
+          setError(`데이터 처리 오류: ${detail}. 잠시 후 다시 시도해주세요.`);
         }
       }
     } finally {
