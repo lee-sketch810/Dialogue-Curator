@@ -14,8 +14,14 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Initialize Gemini
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY2 || process.env.GEMINI_API_KEY || '' });
+// Remove top-level genAI initialization to ensure fresh key usage
+const getGenAI = () => {
+  const key = process.env.GEMINI_API_KEY2 || process.env.GEMINI_API_KEY;
+  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'MY_GEMINI_API_KEY2') {
+    throw new Error("API_KEY_MISSING");
+  }
+  return new GoogleGenAI({ apiKey: key });
+};
 
 interface Dialogue {
   quote: string;
@@ -116,7 +122,8 @@ export default function App() {
 
   const fillQuotePool = async () => {
     try {
-      const response = await genAI.models.generateContent({
+      const ai = getGenAI();
+      const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
@@ -154,6 +161,7 @@ export default function App() {
     }
     setError(null);
     try {
+      const ai = getGenAI();
       const model = "gemini-3-flash-preview";
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
@@ -166,7 +174,7 @@ export default function App() {
       Do not use actual newlines inside strings. 
       Return ONLY the JSON array. Use Korean.`;
 
-      const response = await genAI.models.generateContent({
+      const response = await ai.models.generateContent({
         model: model,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
@@ -203,10 +211,14 @@ export default function App() {
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Search Error:", err);
       if (!isBackground) {
-        setError("데이터를 처리하는 중 오류가 발생했습니다. 버튼을 다시 눌러주세요.");
+        if (err.message === "API_KEY_MISSING") {
+          setError("API 키가 설정되지 않았습니다. 환경 변수 설정을 확인해주세요.");
+        } else {
+          setError("데이터를 처리하는 중 오류가 발생했습니다. 버튼을 다시 눌러주세요.");
+        }
       }
     } finally {
       if (!isBackground) setLoading(false);
