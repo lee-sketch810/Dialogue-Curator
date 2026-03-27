@@ -467,8 +467,12 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="grid gap-8"
             >
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <Loader2 className="w-10 h-10 text-[#D4A373] animate-spin" />
+                <p className="text-[#D4A373] font-medium animate-pulse">명대사를 큐레이팅하고 있습니다...</p>
+              </div>
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white p-8 md:p-12 rounded-3xl border border-[#F0F0F0] animate-pulse">
+                <div key={i} className="bg-white p-8 md:p-12 rounded-3xl border border-[#F0F0F0] animate-pulse opacity-50">
                   <div className="w-10 h-10 bg-[#F5EBE0] rounded-lg mb-6" />
                   <div className="h-8 bg-[#F5F5F5] rounded-md w-3/4 mb-6" />
                   <div className="flex gap-4 mb-6">
