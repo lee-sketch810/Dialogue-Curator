@@ -136,12 +136,13 @@ export default function App() {
     try {
       const ai = getGenAI();
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
-          systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Return ONLY JSON.",
+          systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid and strings are properly terminated. Return ONLY JSON.",
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
           maxOutputTokens: 1500
         },
       });
@@ -152,17 +153,20 @@ export default function App() {
         const end = cleaned.lastIndexOf(']');
         let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
         
-        // Replace literal control characters (like newlines) with spaces to prevent "Unterminated string"
-        // JSON.parse does not allow raw control characters inside strings.
-        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ');
+        // Aggressive cleanup for JSON parsing
+        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
-        const parsed = JSON.parse(jsonStr);
-        if (Array.isArray(parsed)) {
-          const sanitized = parsed.map(item => ({
-            ...item,
-            quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
-          }));
-          setQuotePool(sanitized);
+        try {
+          const parsed = JSON.parse(jsonStr);
+          if (Array.isArray(parsed)) {
+            const sanitized = parsed.map(item => ({
+              ...item,
+              quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
+            }));
+            setQuotePool(sanitized);
+          }
+        } catch (parseErr) {
+          console.error("JSON Parse Error in Pool:", parseErr, "Raw:", jsonStr);
         }
       }
     } catch (e) {
@@ -178,8 +182,7 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      // Use a more widely available stable alias
-      const model = "gemini-flash-latest";
+      const model = "gemini-3-flash-preview";
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
         : `Find 3 movie or drama quotes for: "${searchQuery}".`;
@@ -188,6 +191,7 @@ export default function App() {
       Return a JSON array of 3 objects. 
       CRITICAL: Do NOT wrap the "quote" value in quotation marks (e.g., use "Hello" not "\"Hello\""). 
       Escape any internal double quotes with a backslash. 
+      Ensure the JSON is valid and all strings are properly terminated.
       Do not use actual newlines inside strings. 
       Return ONLY the JSON array. Use Korean.`;
 
@@ -198,6 +202,7 @@ export default function App() {
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
           maxOutputTokens: 1500
         },
       });
@@ -210,24 +215,31 @@ export default function App() {
         const end = cleaned.lastIndexOf(']');
         let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
 
-        // Replace literal control characters (like newlines) with spaces to prevent "Unterminated string"
-        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ');
+        // Aggressive cleanup
+        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
-        const parsed = JSON.parse(jsonStr);
-        
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Sanitize quotes to remove extra wrapping quotes if AI provided them
-          const sanitized = parsed.map(item => ({
-            ...item,
-            quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
-          }));
-          setResults(sanitized);
+        try {
+          const parsed = JSON.parse(jsonStr);
           
-          if (!searchQuery && (category === '인생에 영감을 주는 무작위' || !category)) {
-            localStorage.setItem('daily_dialogues', JSON.stringify({
-              data: sanitized,
-              timestamp: Date.now()
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Sanitize quotes to remove extra wrapping quotes if AI provided them
+            const sanitized = parsed.map(item => ({
+              ...item,
+              quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
             }));
+            setResults(sanitized);
+            
+            if (!searchQuery && (category === '인생에 영감을 주는 무작위' || !category)) {
+              localStorage.setItem('daily_dialogues', JSON.stringify({
+                data: sanitized,
+                timestamp: Date.now()
+              }));
+            }
+          }
+        } catch (parseErr) {
+          console.error("JSON Parse Error in Search:", parseErr, "Raw:", jsonStr);
+          if (!isBackground) {
+            setError("데이터를 해석하는 중 오류가 발생했습니다. 다시 시도해주세요.");
           }
         }
       }
