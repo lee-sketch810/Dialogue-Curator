@@ -397,7 +397,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#2C2C2C] font-sans selection:bg-[#E6D5B8]">
       {/* Hero Section */}
-      <header className="pt-20 pb-12 px-6 max-w-4xl mx-auto text-center">
+      <header className="pt-20 pb-12 px-4 md:px-6 max-w-4xl mx-auto text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -423,15 +423,15 @@ export default function App() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="작품명, 배우, 혹은 지금의 기분을 입력해보세요..."
-            className="w-full px-4 py-3 md:px-6 md:py-4 rounded-full bg-white border border-[#E5E5E5] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4A373] transition-all text-xs sm:text-sm md:text-lg placeholder:text-[#A0A0A0]"
+            placeholder="작품, 배우, 기분 검색..."
+            className="w-full pl-3 pr-11 py-3 md:px-6 md:py-4 rounded-full bg-white border border-[#E5E5E5] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4A373] transition-all text-[10px] sm:text-sm md:text-lg placeholder:text-[#A0A0A0]"
           />
           <button 
             type="submit"
             disabled={loading}
-            className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-[#2C2C2C] text-white rounded-full hover:bg-[#404040] transition-colors disabled:opacity-50"
+            className="absolute right-1.5 md:right-3 top-1/2 -translate-y-1/2 p-1 md:p-2 bg-[#2C2C2C] text-white rounded-full hover:bg-[#404040] transition-colors disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-5 h-5 md:w-6 h-6 animate-spin" /> : <Search className="w-5 h-5 md:w-6 h-6" />}
+            {loading ? <Loader2 className="w-4 h-4 md:w-6 h-6 animate-spin" /> : <Search className="w-4 h-4 md:w-6 h-6" />}
           </button>
         </motion.form>
 
