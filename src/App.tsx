@@ -19,10 +19,17 @@ const getGenAI = () => {
   const key = 
     process.env.GEMINI_API_KEY2 || 
     process.env.GEMINI_API_KEY || 
+    process.env.API_KEY ||
     (import.meta as any).env?.VITE_GEMINI_API_KEY2 || 
-    (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    (import.meta as any).env?.VITE_API_KEY;
     
-  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'MY_GEMINI_API_KEY2' || key === 'undefined') {
+  if (!key || key === 'MY_GEMINI_API_KEY' || key === 'MY_GEMINI_API_KEY2' || key === 'undefined' || key === '') {
+    console.error("API Key Check Failed. Current Keys:", {
+      GEMINI_API_KEY2: !!process.env.GEMINI_API_KEY2,
+      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      API_KEY: !!process.env.API_KEY,
+    });
     throw new Error("API_KEY_MISSING");
   }
   return new GoogleGenAI({ apiKey: key });
