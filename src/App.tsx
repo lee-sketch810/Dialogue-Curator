@@ -424,14 +424,14 @@ export default function App() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="작품명, 배우, 혹은 지금의 기분을 입력해보세요..."
-            className="w-full px-6 py-4 rounded-full bg-white border border-[#E5E5E5] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4A373] transition-all text-lg placeholder:text-[#A0A0A0]"
+            className="w-full px-4 py-3 md:px-6 md:py-4 rounded-full bg-white border border-[#E5E5E5] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#D4A373] transition-all text-xs sm:text-sm md:text-lg placeholder:text-[#A0A0A0]"
           />
           <button 
             type="submit"
             disabled={loading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-[#2C2C2C] text-white rounded-full hover:bg-[#404040] transition-colors disabled:opacity-50"
+            className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-[#2C2C2C] text-white rounded-full hover:bg-[#404040] transition-colors disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+            {loading ? <Loader2 className="w-5 h-5 md:w-6 h-6 animate-spin" /> : <Search className="w-5 h-5 md:w-6 h-6" />}
           </button>
         </motion.form>
 
