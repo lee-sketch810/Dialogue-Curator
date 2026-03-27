@@ -598,24 +598,7 @@ export default function App() {
                 </motion.article>
               ))}
             </motion.div>
-          ) : (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-32"
-            >
-              <div className="w-20 h-20 bg-[#F5F5F5] rounded-full flex items-center justify-center mx-auto mb-8">
-                <MessageSquare className="w-10 h-10 text-[#D4A373] opacity-30" />
-              </div>
-              <h3 className="text-xl font-bold text-[#2C2C2C] mb-3">명대사를 찾아보세요</h3>
-              <p className="text-[#A0A0A0] max-w-xs mx-auto leading-relaxed">
-                위의 검색창에 키워드를 입력하거나<br />
-                카테고리를 선택하여 영감을 주는 대사를 찾아보세요.
-              </p>
-            </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </main>
 
