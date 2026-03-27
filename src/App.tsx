@@ -135,13 +135,14 @@ export default function App() {
   const fillQuotePool = async (retryCount = 0) => {
     try {
       const ai = getGenAI();
-      const model = retryCount > 0 ? "gemini-1.5-flash-latest" : "gemini-3-flash-preview";
+      // Use standard aliases from guidelines
+      const model = retryCount === 0 ? "gemini-3-flash-preview" : "gemini-flash-latest";
       
       const response = await ai.models.generateContent({
         model: model,
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
-          systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid and strings are properly terminated. Return ONLY JSON.",
+          systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid. Return ONLY JSON.",
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
           thinkingConfig: model.includes('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
@@ -172,8 +173,8 @@ export default function App() {
       }
     } catch (e: any) {
       console.error("Pool Fill Error:", e);
-      // Fallback to stable model if quota exceeded
-      if (e.message?.includes('429') && retryCount === 0) {
+      // Fallback if model not found or quota exceeded
+      if ((e.message?.includes('404') || e.message?.includes('429')) && retryCount === 0) {
         fillQuotePool(1);
       }
     }
@@ -187,7 +188,7 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      const model = retryCount > 0 ? "gemini-1.5-flash-latest" : "gemini-3-flash-preview";
+      const model = retryCount === 0 ? "gemini-3-flash-preview" : "gemini-flash-latest";
       
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
@@ -195,10 +196,9 @@ export default function App() {
 
       const systemInstruction = `You are a professional Dialogue Curator. 
       Return a JSON array of 3 objects. 
-      CRITICAL: Do NOT wrap the "quote" value in quotation marks (e.g., use "Hello" not "\"Hello\""). 
+      CRITICAL: Do NOT wrap the "quote" value in quotation marks. 
       Escape any internal double quotes with a backslash. 
       Ensure the JSON is valid and all strings are properly terminated.
-      Do not use actual newlines inside strings. 
       Return ONLY the JSON array. Use Korean.`;
 
       const response = await ai.models.generateContent({
@@ -249,24 +249,22 @@ export default function App() {
     } catch (err: any) {
       console.error("Search Error:", err);
       
-      // Handle Quota Exceeded (429)
-      if (err.message?.includes('429')) {
-        if (retryCount === 0) {
-          // Try fallback model
-          searchDialogues(searchQuery, category, isBackground, 1);
-          return;
-        } else if (!isBackground) {
-          setError("오늘의 추천 한도를 초과했습니다. 잠시 후(약 1분 뒤) 다시 시도해주세요.");
-          return;
-        }
+      // Handle 404 (Model Not Found) or 429 (Quota Exceeded)
+      if ((err.message?.includes('404') || err.message?.includes('429')) && retryCount === 0) {
+        searchDialogues(searchQuery, category, isBackground, 1);
+        return;
       }
 
       if (!isBackground) {
         if (err.message === "API_KEY_MISSING") {
           setError("API 키가 설정되지 않았습니다. 환경 변수 설정을 확인해주세요.");
+        } else if (err.message?.includes('404')) {
+          setError("요청한 모델을 찾을 수 없습니다. API 설정을 확인해주세요.");
+        } else if (err.message?.includes('429')) {
+          setError("오늘의 추천 한도를 초과했습니다. 잠시 후 다시 시도해주세요.");
         } else {
           const detail = err.message || "알 수 없는 오류";
-          setError(`데이터 처리 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`);
+          setError(`데이터 처리 오류가 발생했습니다: ${detail}`);
         }
       }
     } finally {
