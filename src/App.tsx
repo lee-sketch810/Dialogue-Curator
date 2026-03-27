@@ -186,8 +186,8 @@ export default function App() {
     try {
       const ai = getGenAI();
       let model = "gemini-3-flash-preview";
-      if (retryCount === 1) model = "gemini-1.5-flash-latest";
-      if (retryCount >= 2) model = "gemini-1.5-flash";
+      if (retryCount === 1) model = "gemini-flash-latest";
+      if (retryCount >= 2) model = "gemini-3.1-flash-lite-preview";
       
       const response = await ai.models.generateContent({
         model: model,
@@ -244,10 +244,10 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      // Try gemini-3-flash-preview first, then gemini-1.5-flash-latest, then gemini-1.5-flash
+      // Try gemini-3-flash-preview first, then gemini-flash-latest, then gemini-3.1-flash-lite-preview
       let model = "gemini-3-flash-preview";
-      if (retryCount === 1) model = "gemini-1.5-flash-latest";
-      if (retryCount >= 2) model = "gemini-1.5-flash";
+      if (retryCount === 1) model = "gemini-flash-latest";
+      if (retryCount >= 2) model = "gemini-3.1-flash-lite-preview";
       
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
