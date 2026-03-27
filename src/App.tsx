@@ -538,7 +538,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <blockquote className="text-2xl md:text-3xl font-serif leading-relaxed text-[#2C2C2C]">
+                    <blockquote className="text-lg md:text-xl font-serif leading-relaxed text-[#2C2C2C] break-keep">
                       "{item.quote}"
                     </blockquote>
 
