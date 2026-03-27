@@ -132,17 +132,19 @@ export default function App() {
     },
   };
 
-  const fillQuotePool = async () => {
+  const fillQuotePool = async (retryCount = 0) => {
     try {
       const ai = getGenAI();
+      const model = retryCount > 0 ? "gemini-1.5-flash-latest" : "gemini-3-flash-preview";
+      
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: model,
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
           systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid and strings are properly terminated. Return ONLY JSON.",
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+          thinkingConfig: model.includes('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
           maxOutputTokens: 1500
         },
       });
@@ -153,7 +155,6 @@ export default function App() {
         const end = cleaned.lastIndexOf(']');
         let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
         
-        // Aggressive cleanup for JSON parsing
         jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
         try {
@@ -166,15 +167,19 @@ export default function App() {
             setQuotePool(sanitized);
           }
         } catch (parseErr) {
-          console.error("JSON Parse Error in Pool:", parseErr, "Raw:", jsonStr);
+          console.error("JSON Parse Error in Pool:", parseErr);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Pool Fill Error:", e);
+      // Fallback to stable model if quota exceeded
+      if (e.message?.includes('429') && retryCount === 0) {
+        fillQuotePool(1);
+      }
     }
   };
 
-  const searchDialogues = async (searchQuery: string, category?: string, isBackground = false) => {
+  const searchDialogues = async (searchQuery: string, category?: string, isBackground = false, retryCount = 0) => {
     if (!isBackground) {
       setLoading(true);
       setResults([]);
@@ -182,7 +187,8 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      const model = "gemini-3-flash-preview";
+      const model = retryCount > 0 ? "gemini-1.5-flash-latest" : "gemini-3-flash-preview";
+      
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
         : `Find 3 movie or drama quotes for: "${searchQuery}".`;
@@ -202,27 +208,24 @@ export default function App() {
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: DIALOGUE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+          thinkingConfig: model.includes('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
           maxOutputTokens: 1500
         },
       });
 
       const text = response.text;
       if (text) {
-        // Robust JSON extraction
         let cleaned = text.replace(/```json\n?|```/g, '').trim();
         const start = cleaned.indexOf('[');
         const end = cleaned.lastIndexOf(']');
         let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
 
-        // Aggressive cleanup
         jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
         try {
           const parsed = JSON.parse(jsonStr);
           
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Sanitize quotes to remove extra wrapping quotes if AI provided them
             const sanitized = parsed.map(item => ({
               ...item,
               quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
@@ -237,7 +240,7 @@ export default function App() {
             }
           }
         } catch (parseErr) {
-          console.error("JSON Parse Error in Search:", parseErr, "Raw:", jsonStr);
+          console.error("JSON Parse Error in Search:", parseErr);
           if (!isBackground) {
             setError("데이터를 해석하는 중 오류가 발생했습니다. 다시 시도해주세요.");
           }
@@ -245,13 +248,25 @@ export default function App() {
       }
     } catch (err: any) {
       console.error("Search Error:", err);
+      
+      // Handle Quota Exceeded (429)
+      if (err.message?.includes('429')) {
+        if (retryCount === 0) {
+          // Try fallback model
+          searchDialogues(searchQuery, category, isBackground, 1);
+          return;
+        } else if (!isBackground) {
+          setError("오늘의 추천 한도를 초과했습니다. 잠시 후(약 1분 뒤) 다시 시도해주세요.");
+          return;
+        }
+      }
+
       if (!isBackground) {
         if (err.message === "API_KEY_MISSING") {
           setError("API 키가 설정되지 않았습니다. 환경 변수 설정을 확인해주세요.");
         } else {
-          // Show more detailed error info for diagnosis
           const detail = err.message || "알 수 없는 오류";
-          setError(`데이터 처리 오류: ${detail}. 잠시 후 다시 시도해주세요.`);
+          setError(`데이터 처리 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`);
         }
       }
     } finally {
