@@ -147,10 +147,15 @@ export default function App() {
       });
       const text = response.text;
       if (text) {
-        const cleaned = text.replace(/```json\n?|```/g, '').trim();
+        let cleaned = text.replace(/```json\n?|```/g, '').trim();
         const start = cleaned.indexOf('[');
         const end = cleaned.lastIndexOf(']');
-        const jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+        let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+        
+        // Replace literal control characters (like newlines) with spaces to prevent "Unterminated string"
+        // JSON.parse does not allow raw control characters inside strings.
+        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ');
+        
         const parsed = JSON.parse(jsonStr);
         if (Array.isArray(parsed)) {
           const sanitized = parsed.map(item => ({
@@ -200,10 +205,14 @@ export default function App() {
       const text = response.text;
       if (text) {
         // Robust JSON extraction
-        const cleaned = text.replace(/```json\n?|```/g, '').trim();
+        let cleaned = text.replace(/```json\n?|```/g, '').trim();
         const start = cleaned.indexOf('[');
         const end = cleaned.lastIndexOf(']');
-        const jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+        let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+
+        // Replace literal control characters (like newlines) with spaces to prevent "Unterminated string"
+        jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ');
+        
         const parsed = JSON.parse(jsonStr);
         
         if (Array.isArray(parsed) && parsed.length > 0) {
