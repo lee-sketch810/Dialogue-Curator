@@ -5,6 +5,12 @@
 
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
+
+declare global {
+  interface Window {
+    PartnersCoupang: any;
+  }
+}
 import { Search, Heart, Sparkles, MessageSquare, Quote, Loader2, Film, User, Info, Copy, Check, Flame, CloudRain, Coffee, Moon, HeartOff, Shield, Plane, Home, Users, Laugh, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -132,51 +138,76 @@ export default function App() {
     },
   };
 
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://ads-partners.coupang.com/g.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.PartnersCoupang) {
+        new window.PartnersCoupang.G({
+          "id": 975969,
+          "template": "carousel",
+          "trackingCode": "AF7483354",
+          "width": "800",
+          "height": "120",
+          "tsource": ""
+        });
+      }
+    };
+    document.body.appendChild(script);
+  }, []);
+
   const fillQuotePool = async (retryCount = 0) => {
     try {
       const ai = getGenAI();
-      // Use standard aliases from guidelines
-      const model = retryCount === 0 ? "gemini-3-flash-preview" : "gemini-flash-latest";
+      let model = "gemini-3-flash-preview";
+      if (retryCount === 1) model = "gemini-1.5-flash-latest";
+      if (retryCount >= 2) model = "gemini-1.5-flash";
       
       const response = await ai.models.generateContent({
         model: model,
         contents: [{ role: 'user', parts: [{ text: "Recommend 3 random movie/drama quotes" }] }],
         config: {
-          systemInstruction: "Return a JSON array of 3 objects. Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid. Return ONLY JSON.",
+          systemInstruction: "Return a JSON array of 3 objects with keys: \"quote\", \"work\", \"character\", \"actor\", \"context\", \"category\". Use Korean. CRITICAL: Do NOT wrap the quote in quotation marks. Escape internal quotes with \\\". Ensure the JSON is valid. Return ONLY JSON.",
           responseMimeType: "application/json",
-          responseSchema: DIALOGUE_SCHEMA,
+          // responseSchema: DIALOGUE_SCHEMA,
           thinkingConfig: model.includes('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
-          maxOutputTokens: 1500
+          maxOutputTokens: 2000
         },
       });
       const text = response.text;
       if (text) {
-        let cleaned = text.replace(/```json\n?|```/g, '').trim();
-        const start = cleaned.indexOf('[');
-        const end = cleaned.lastIndexOf(']');
-        let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+        let jsonStr = text.replace(/```json\n?|```/g, '').trim();
+        const start = jsonStr.indexOf('[');
+        const end = jsonStr.lastIndexOf(']');
+        if (start !== -1 && end !== -1) {
+          jsonStr = jsonStr.substring(start, end + 1);
+        }
         
         jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
         try {
           const parsed = JSON.parse(jsonStr);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             const sanitized = parsed.map(item => ({
               ...item,
-              quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
+              quote: (item.quote || "").replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim(),
+              work: item.work || "알 수 없음",
+              character: item.character || "알 수 없음",
+              actor: item.actor || "알 수 없음",
+              context: item.context || "",
+              category: item.category || "기타"
             }));
             setQuotePool(sanitized);
           }
         } catch (parseErr) {
           console.error("JSON Parse Error in Pool:", parseErr);
+          if (retryCount < 2) fillQuotePool(retryCount + 1);
         }
       }
     } catch (e: any) {
       console.error("Pool Fill Error:", e);
-      // Fallback if model not found or quota exceeded
-      if ((e.message?.includes('404') || e.message?.includes('429')) && retryCount === 0) {
-        fillQuotePool(1);
-      }
+      if (retryCount < 2) fillQuotePool(retryCount + 1);
     }
   };
 
@@ -188,14 +219,17 @@ export default function App() {
     setError(null);
     try {
       const ai = getGenAI();
-      const model = retryCount === 0 ? "gemini-3-flash-preview" : "gemini-flash-latest";
+      // Try gemini-3-flash-preview first, then gemini-1.5-flash-latest, then gemini-1.5-flash
+      let model = "gemini-3-flash-preview";
+      if (retryCount === 1) model = "gemini-1.5-flash-latest";
+      if (retryCount >= 2) model = "gemini-1.5-flash";
       
       const prompt = category 
         ? `Recommend 3 unique movie or drama quotes for: "${category}".`
         : `Find 3 movie or drama quotes for: "${searchQuery}".`;
 
       const systemInstruction = `You are a professional Dialogue Curator. 
-      Return a JSON array of 3 objects. 
+      Return a JSON array of 3 objects with keys: "quote", "work", "character", "actor", "context", "category".
       CRITICAL: Do NOT wrap the "quote" value in quotation marks. 
       Escape any internal double quotes with a backslash. 
       Ensure the JSON is valid and all strings are properly terminated.
@@ -207,19 +241,23 @@ export default function App() {
         config: {
           systemInstruction,
           responseMimeType: "application/json",
-          responseSchema: DIALOGUE_SCHEMA,
+          // Removing responseSchema temporarily to see if it improves compatibility in restricted regions
+          // responseSchema: DIALOGUE_SCHEMA,
           thinkingConfig: model.includes('gemini-3') ? { thinkingLevel: ThinkingLevel.MINIMAL } : undefined,
-          maxOutputTokens: 1500
+          maxOutputTokens: 2000
         },
       });
 
       const text = response.text;
       if (text) {
-        let cleaned = text.replace(/```json\n?|```/g, '').trim();
-        const start = cleaned.indexOf('[');
-        const end = cleaned.lastIndexOf(']');
-        let jsonStr = (start !== -1 && end !== -1) ? cleaned.substring(start, end + 1) : cleaned;
+        let jsonStr = text.replace(/```json\n?|```/g, '').trim();
+        const start = jsonStr.indexOf('[');
+        const end = jsonStr.lastIndexOf(']');
+        if (start !== -1 && end !== -1) {
+          jsonStr = jsonStr.substring(start, end + 1);
+        }
 
+        // Aggressive cleanup
         jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ').trim();
         
         try {
@@ -228,7 +266,12 @@ export default function App() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const sanitized = parsed.map(item => ({
               ...item,
-              quote: item.quote.replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim()
+              quote: (item.quote || "").replace(/^[ "'“‘]+|[ "'”’]+$/g, '').trim(),
+              work: item.work || "알 수 없음",
+              character: item.character || "알 수 없음",
+              actor: item.actor || "알 수 없음",
+              context: item.context || "",
+              category: item.category || category || "기타"
             }));
             setResults(sanitized);
             
@@ -238,33 +281,37 @@ export default function App() {
                 timestamp: Date.now()
               }));
             }
+          } else {
+            throw new Error("EMPTY_RESPONSE");
           }
         } catch (parseErr) {
-          console.error("JSON Parse Error in Search:", parseErr);
-          if (!isBackground) {
-            setError("데이터를 해석하는 중 오류가 발생했습니다. 다시 시도해주세요.");
+          console.error("JSON Parse Error:", parseErr, "Raw:", text);
+          if (retryCount < 2) {
+            searchDialogues(searchQuery, category, isBackground, retryCount + 1);
+          } else if (!isBackground) {
+            setError("데이터를 해석하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
           }
         }
       }
     } catch (err: any) {
       console.error("Search Error:", err);
       
-      // Handle 404 (Model Not Found) or 429 (Quota Exceeded)
-      if ((err.message?.includes('404') || err.message?.includes('429')) && retryCount === 0) {
-        searchDialogues(searchQuery, category, isBackground, 1);
+      // Handle 404, 429, 403, 500 etc.
+      if (retryCount < 2) {
+        searchDialogues(searchQuery, category, isBackground, retryCount + 1);
         return;
       }
 
       if (!isBackground) {
         if (err.message === "API_KEY_MISSING") {
           setError("API 키가 설정되지 않았습니다. 환경 변수 설정을 확인해주세요.");
-        } else if (err.message?.includes('404')) {
-          setError("요청한 모델을 찾을 수 없습니다. API 설정을 확인해주세요.");
         } else if (err.message?.includes('429')) {
-          setError("오늘의 추천 한도를 초과했습니다. 잠시 후 다시 시도해주세요.");
+          setError("오늘의 추천 한도를 초과했습니다. 잠시 후(약 1분 뒤) 다시 시도해주세요.");
+        } else if (err.message?.includes('403')) {
+          setError("API 접근이 거부되었습니다. API 키 권한을 확인해주세요.");
         } else {
           const detail = err.message || "알 수 없는 오류";
-          setError(`데이터 처리 오류가 발생했습니다: ${detail}`);
+          setError(`서비스 연결 오류: ${detail.substring(0, 100)}...`);
         }
       }
     } finally {
@@ -466,7 +513,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <blockquote className="text-2xl md:text-3xl font-serif leading-relaxed text-[#2C2C2C]">
+                    <blockquote className="text-2xl md:text-3xl font-serif leading-relaxed text-[#2C2C2C] line-clamp-1" title={item.quote}>
                       "{item.quote}"
                     </blockquote>
 
@@ -509,19 +556,37 @@ export default function App() {
               key="error"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-10 text-red-400 text-sm italic"
+              className="text-center py-10 flex flex-col items-center gap-4"
             >
-              {error}
+              <p className="text-red-400 text-sm italic">{error}</p>
+              <button
+                onClick={() => searchDialogues(query, selectedCategory || undefined, false, 1)}
+                className="px-6 py-2 rounded-full border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors flex items-center gap-2"
+              >
+                <Shuffle className="w-3 h-3" />
+                다른 방식으로 다시 시도
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-[#F0F0F0] text-center">
-        <p className="text-[#A0A0A0] text-xs tracking-widest uppercase">
-          © 2026 Dialogue Curator • Curated with Heart
-        </p>
+      <footer className="py-12 border-t border-[#F0F0F0] text-center flex flex-col items-center gap-12">
+        <div className="max-w-[800px] w-full px-4">
+          <p className="text-sm md:text-base text-[#6B6B6B] mb-6 font-medium">
+            이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+          </p>
+          <div className="overflow-hidden rounded-2xl bg-white border border-[#F0F0F0] shadow-sm h-[120px]">
+            {/* Coupang carousel will be injected here by the script */}
+          </div>
+        </div>
+        
+        <div className="w-full pt-8 border-t border-[#F5F5F5]">
+          <p className="text-[#A0A0A0] text-[10px] tracking-[0.2em] uppercase font-bold">
+            © 2026 Dialogue Curator • Curated with Heart
+          </p>
+        </div>
       </footer>
     </div>
   );
