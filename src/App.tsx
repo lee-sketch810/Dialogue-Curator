@@ -157,18 +157,26 @@ export default function App() {
         });
         window.PartnersCoupangInitialized = true;
         
-        // Move the generated iframe to our container after a short delay
-        setTimeout(() => {
+        // Use an interval to find and move the iframe to our container
+        let attempts = 0;
+        const moveWidget = setInterval(() => {
+          attempts++;
           const iframes = document.querySelectorAll('iframe');
           const coupangIframe = Array.from(iframes).find(f => f.src.includes('ads-partners.coupang.com'));
           const container = document.getElementById('coupang-widget-container');
+          
           if (coupangIframe && container) {
             container.innerHTML = '';
             container.appendChild(coupangIframe);
             coupangIframe.style.display = 'block';
             coupangIframe.style.margin = '0 auto';
+            coupangIframe.style.border = 'none';
+            clearInterval(moveWidget);
           }
-        }, 1500);
+          
+          // Stop trying after 10 seconds
+          if (attempts > 20) clearInterval(moveWidget);
+        }, 500);
       }
     };
     document.body.appendChild(script);
