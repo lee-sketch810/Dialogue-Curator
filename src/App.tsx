@@ -481,7 +481,7 @@ export default function App() {
                   <Loader2 className="w-12 h-12 text-[#D4A373] animate-spin relative z-10" />
                 </div>
                 <div className="text-center">
-                  <p className="text-[#D4A373] font-bold text-lg animate-pulse">대사를 찾는 중...</p>
+                  <p className="text-[#D4A373] font-bold text-lg animate-pulse">로딩중입니다</p>
                 </div>
               </div>
               
