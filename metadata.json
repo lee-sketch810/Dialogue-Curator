@@ -1,0 +1,5 @@
+{
+  "name": "대사 큐레이터 (Dialogue Curator)",
+  "description": "영화와 드라마 속 명대사를 감성적으로 큐레이션해주는 전문 서비스입니다.",
+  "requestFramePermissions": []
+}
