@@ -538,7 +538,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <blockquote className="text-2xl md:text-3xl font-serif leading-relaxed text-[#2C2C2C] line-clamp-1" title={item.quote}>
+                    <blockquote className="text-2xl md:text-3xl font-serif leading-relaxed text-[#2C2C2C]">
                       "{item.quote}"
                     </blockquote>
 
